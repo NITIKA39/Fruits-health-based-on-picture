@@ -1,5 +1,5 @@
-import torch
 import streamlit as st
+import torch
 
 from PIL import Image
 from torchvision import transforms
@@ -7,11 +7,22 @@ from torchvision import transforms
 from model import create_model
 
 
-# -----------------------------
-# Classes
-# -----------------------------
+# --------------------------------------------------
+# Page configuration
+# --------------------------------------------------
 
-CLASSES = [
+st.set_page_config(
+    page_title="Food Freshness Classifier",
+    page_icon="🍎",
+    layout="centered"
+)
+
+
+# --------------------------------------------------
+# Classes
+# --------------------------------------------------
+
+classes = [
     "fresh_apple",
     "fresh_banana",
     "fresh_bitter_gourd",
@@ -25,43 +36,52 @@ CLASSES = [
 ]
 
 
-# -----------------------------
-# Device
-# -----------------------------
+# --------------------------------------------------
+# Helper function
+# --------------------------------------------------
 
-DEVICE = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
-)
+def format_class_name(class_name):
+
+    parts = class_name.split("_")
+
+    condition = parts[0].capitalize()
+    food = " ".join(parts[1:]).title()
+
+    return food, condition
 
 
-# -----------------------------
-# Load trained model
-# -----------------------------
+# --------------------------------------------------
+# Load model
+# --------------------------------------------------
 
 @st.cache_resource
 def load_model():
+
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )
 
     model = create_model()
 
     model.load_state_dict(
         torch.load(
             "best_model.pth",
-            map_location=DEVICE
+            map_location=device
         )
     )
 
-    model = model.to(DEVICE)
+    model = model.to(device)
     model.eval()
 
-    return model
+    return model, device
 
 
-model = load_model()
+model, device = load_model()
 
 
-# -----------------------------
+# --------------------------------------------------
 # Image preprocessing
-# -----------------------------
+# --------------------------------------------------
 
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -73,15 +93,9 @@ transform = transforms.Compose([
 ])
 
 
-# -----------------------------
-# Streamlit page
-# -----------------------------
-
-st.set_page_config(
-    page_title="Food Freshness Classifier",
-    page_icon="🍎",
-    layout="centered"
-)
+# --------------------------------------------------
+# Title
+# --------------------------------------------------
 
 st.title("Food Freshness Classifier")
 
@@ -96,9 +110,9 @@ st.info(
 )
 
 
-# -----------------------------
+# --------------------------------------------------
 # Upload image
-# -----------------------------
+# --------------------------------------------------
 
 uploaded_file = st.file_uploader(
     "Upload a food image",
@@ -106,9 +120,9 @@ uploaded_file = st.file_uploader(
 )
 
 
-# -----------------------------
+# --------------------------------------------------
 # Prediction
-# -----------------------------
+# --------------------------------------------------
 
 if uploaded_file is not None:
 
@@ -119,14 +133,22 @@ if uploaded_file is not None:
     st.image(
         image,
         caption="Uploaded image",
-        use_container_width=True
+        width=700
     )
 
+    # Convert image to tensor
     input_tensor = transform(image)
 
+    # Add batch dimension
     input_tensor = input_tensor.unsqueeze(0)
 
-    input_tensor = input_tensor.to(DEVICE)
+    # Move to CPU/GPU
+    input_tensor = input_tensor.to(device)
+
+
+    # ----------------------------------------------
+    # Model prediction
+    # ----------------------------------------------
 
     with torch.no_grad():
 
@@ -137,32 +159,34 @@ if uploaded_file is not None:
             dim=1
         )
 
-        predicted_index = torch.argmax(
-            probabilities,
-            dim=1
-        ).item()
+        top_probabilities, top_indices = torch.topk(
+            probabilities[0],
+            k=3
+        )
 
-        confidence = probabilities[
-            0,
-            predicted_index
-        ].item()
 
-    predicted_class = CLASSES[
+    # ----------------------------------------------
+    # Main prediction
+    # ----------------------------------------------
+
+    predicted_index = top_indices[0].item()
+
+    predicted_class = classes[
         predicted_index
     ]
 
-    # Split "stale_banana" into:
-    # condition = stale
-    # food = banana
+    confidence = top_probabilities[0].item()
 
-    condition, food = predicted_class.split(
-        "_",
-        maxsplit=1
+    food, condition = format_class_name(
+        predicted_class
     )
 
-    # -------------------------
-    # Display result
-    # -------------------------
+
+    # ----------------------------------------------
+    # Result
+    # ----------------------------------------------
+
+    st.divider()
 
     st.subheader("Prediction")
 
@@ -170,44 +194,103 @@ if uploaded_file is not None:
 
     with col1:
 
-        st.metric(
-            "Food",
-            food.replace("_", " ").title()
+        st.caption("Food")
+
+        st.markdown(
+            f"### {food}"
         )
 
     with col2:
 
-        st.metric(
-            "Condition",
-            condition.title()
-        )
+        st.caption("Condition")
 
-    st.metric(
-        "Confidence",
-        f"{confidence * 100:.2f}%"
+        if condition == "Fresh":
+
+            st.success(
+                f"### {condition}"
+            )
+
+        else:
+
+            st.warning(
+                f"### {condition}"
+            )
+
+
+    st.caption("Confidence")
+
+    st.markdown(
+        f"## {confidence * 100:.2f}%"
     )
 
-    # -------------------------
+
+    # ----------------------------------------------
     # Top 3 predictions
-    # -------------------------
+    # ----------------------------------------------
 
-    st.subheader("Top 3 Predictions")
+    # st.divider()
 
-    top_probabilities, top_indices = torch.topk(
-        probabilities[0],
-        k=3
-    )
+    # st.subheader("Top 3 Predictions")
 
-    for probability, index in zip(
-        top_probabilities,
-        top_indices
-    ):
+    # for probability, index in zip(
+    #     top_probabilities,
+    #     top_indices
+    # ):
 
-        class_name = CLASSES[
-            index.item()
-        ]
+    #     class_name = classes[
+    #         index.item()
+    #     ]
 
-        st.write(
-            f"**{class_name.replace('_', ' ').title()}** — "
-            f"{probability.item() * 100:.2f}%"
-        )
+    #     food_name, condition_name = format_class_name(
+    #         class_name
+    #     )
+
+    #     percentage = probability.item() * 100
+
+    #     st.write(
+    #         f"**{condition_name} {food_name}**"
+    #     )
+
+    #     st.progress(
+    #         probability.item()
+    #     )
+
+    #     st.caption(
+    #         f"{percentage:.2f}%"
+    #     )
+
+
+    # ----------------------------------------------
+    # About the model
+    # ----------------------------------------------
+
+    # st.divider()
+
+    # with st.expander("About this model"):
+
+    #     st.write(
+    #         "This application uses MobileNetV3 Small "
+    #         "with transfer learning."
+    #     )
+
+    #     st.write(
+    #         "The model was trained to classify "
+    #         "10 visual food freshness classes."
+    #     )
+
+    #     st.write(
+    #         "Input images are resized to 224 × 224 pixels "
+    #         "and normalized using ImageNet statistics."
+    #     )
+
+    #     st.write(
+    #         "The model achieved 99.53% accuracy on the "
+    #         "held-out test set of 1,687 images."
+    #     )
+
+    #     st.write(
+    #         "The test accuracy represents performance on "
+    #         "the project's held-out dataset and does not "
+    #         "guarantee the same performance on arbitrary "
+    #         "real-world images."
+    #     )
