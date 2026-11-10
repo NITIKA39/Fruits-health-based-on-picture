@@ -1,62 +1,84 @@
 # Food Freshness Classifier
 
-A deep learning image classification project that identifies the type of fruit or vegetable and classifies its **visual freshness condition** as fresh or stale.
+A deep learning application that classifies food images based on their **visual freshness condition** using transfer learning with **MobileNetV3 Small**.
 
-The project uses transfer learning with **MobileNetV3 Small** and provides a **Streamlit web interface** where users can upload an image and receive a prediction with confidence scores.
+## Live Demo
 
-> **Note:** This project performs visual freshness classification. It does not determine whether food is safe to eat.
+**Try the deployed application:**
+
+https://fruits-health-based-on-picture-ferers8ytrsqpym4qjjnff.streamlit.app/
+
+Upload a food image and the application automatically predicts the food type, freshness condition, and confidence.
+
+> **Note:** This model performs visual freshness classification. It does not determine whether food is safe to eat.
+
+---
+
+## Project Overview
+
+Freshness classification can help automate the visual inspection of fruits and vegetables. This project uses a convolutional neural network with transfer learning to classify images into food-specific fresh and stale categories.
+
+The complete pipeline covers:
+
+**Dataset → Data Preparation → Preprocessing → Data Augmentation → Transfer Learning → Training → Evaluation → Prediction → Streamlit Deployment**
 
 ---
 
 ## Features
 
-- Classifies 10 food freshness categories
-- Identifies both food type and freshness condition
-- Uses transfer learning with MobileNetV3 Small
+- Classifies food images into fresh/stale categories
+- Supports 10 food freshness classes
+- Uses MobileNetV3 Small with transfer learning
 - Handles class imbalance using weighted Cross-Entropy Loss
-- Uses training-time image augmentation
-- Provides Top-3 predictions with confidence scores
-- Includes a Streamlit web application
-- Evaluated on a held-out test set
-- Supports external image testing
+- Uses training data augmentation
+- Provides confidence scores for predictions
+- Includes a trained model
+- Includes test-set evaluation and confusion matrix
+- Provides a Streamlit web application
+- Automatically predicts after an image is uploaded
+- Deployed publicly using Streamlit Community Cloud
 
 ---
 
-## Classes
+## Supported Classes
 
-The model predicts the following 10 classes:
+The model was trained on the following 10 classes:
 
-- Fresh Apple
-- Fresh Banana
-- Fresh Bitter Gourd
-- Fresh Capsicum
-- Fresh Orange
-- Fresh Tomato
-- Stale Apple
-- Stale Banana
-- Stale Bitter Gourd
-- Stale Capsicum
+```text
+fresh_apple
+fresh_banana
+fresh_bitter_gourd
+fresh_capsicum
+fresh_orange
+fresh_tomato
+stale_apple
+stale_banana
+stale_bitter_gourd
+stale_capsicum
+```
 
 ---
 
 ## Dataset
 
-The project uses the Kaggle **Fresh and Stale Images of Fruits and Vegetables** dataset.
+The project uses the **Fresh and Stale Images of Fruits and Vegetables** dataset.
 
-The dataset contains:
+### Dataset Statistics
 
-- **11,243 images**
-- **10 classes**
+- Total images: **11,243**
+- Number of classes: **10**
 
-The original dataset is imbalanced, with some classes containing significantly fewer images than others.
+The dataset was divided into:
 
-The data was divided using a stratified split:
+| Split | Images |
+|---|---:|
+| Training | 7,870 |
+| Validation | 1,686 |
+| Test | 1,687 |
 
-- Training: **7,870 images**
-- Validation: **1,686 images**
-- Test: **1,687 images**
+The dataset contains significant class imbalance. For example, the training set contains many more stale apples than stale capsicums.
 
-The dataset itself is not included in this repository because of its size.
+To address this, class weights were calculated from the training distribution and used with Cross-Entropy Loss.
 
 ---
 
@@ -65,199 +87,254 @@ The dataset itself is not included in this repository because of its size.
 ```text
 Raw Images
      ↓
+Dataset Analysis
+     ↓
 Train / Validation / Test Split
      ↓
-Image Resize: 224 × 224
+Image Preprocessing
      ↓
 Data Augmentation
-     ↓
-Tensor Conversion
-     ↓
-ImageNet Normalization
      ↓
 MobileNetV3 Small
      ↓
 Transfer Learning
      ↓
-10-Class Classification
+Weighted Cross-Entropy Loss
      ↓
-Prediction + Confidence
+Training
+     ↓
+Validation
+     ↓
+Best Model Selection
+     ↓
+Test Evaluation
+     ↓
+Streamlit Deployment
 ```
+
+---
+
+## Image Preprocessing
+
+All images are:
+
+1. Resized to **224 × 224**
+2. Converted to RGB
+3. Converted to PyTorch tensors
+4. Normalized using ImageNet statistics
+
+### Training Augmentation
+
+Training images use:
+
+- Random horizontal flipping
+- Random rotation up to 10 degrees
+
+Validation and test images use only deterministic preprocessing.
+
+This prevents artificial transformations from affecting evaluation results.
 
 ---
 
 ## Model
 
-The project uses **MobileNetV3 Small** with pretrained ImageNet weights.
+The project uses **MobileNetV3 Small** pretrained on ImageNet.
 
-The pretrained feature extractor is frozen and the final classifier is replaced with a classifier for the project's 10 classes.
+Instead of training the entire neural network from scratch, transfer learning is used.
+
+### Transfer Learning Approach
+
+The pretrained feature extractor is frozen:
+
+```text
+MobileNetV3 Small
+      ↓
+Pretrained Feature Extractor
+      ↓
+Classifier
+      ↓
+10 Output Classes
+```
+
+The final classifier is modified to produce predictions for the project's 10 classes.
 
 ### Why MobileNetV3 Small?
 
-MobileNetV3 Small was selected because it is:
+MobileNetV3 Small was selected because it provides a good balance between:
 
-- Lightweight
-- Computationally efficient
-- Suitable for CPU-based inference
-- Faster to train and deploy than larger CNN architectures
-- Suitable for a small-scale image classification application
+- Model size
+- Computational efficiency
+- Prediction speed
+- Accuracy
+- CPU compatibility
+- Deployment suitability
 
----
-
-## Preprocessing
-
-Input images are resized to:
-
-```text
-224 × 224 pixels
-```
-
-Training images use augmentation:
-
-- Random horizontal flip
-- Random rotation
-
-Validation and test images use deterministic preprocessing.
-
-Images are normalized using ImageNet statistics:
-
-```text
-Mean = [0.485, 0.456, 0.406]
-Std  = [0.229, 0.224, 0.225]
-```
+This makes it practical for a lightweight portfolio application.
 
 ---
 
 ## Handling Class Imbalance
 
-The dataset contains a large difference in the number of images between classes.
+The original dataset contains highly uneven class distributions.
 
-For example, the training set contains many more stale apple images than stale capsicum images.
-
-To reduce the effect of this imbalance, class-weighted Cross-Entropy Loss was used.
-
-The class weight for each class was calculated as:
+For example:
 
 ```text
-weight = total_samples / (number_of_classes × class_samples)
+stale_apple          2342 images
+stale_capsicum         39 images
 ```
 
-This gives greater importance to classes with fewer training examples.
+Training directly on this distribution could cause the model to favor classes with more examples.
+
+To reduce this effect, class weights were calculated using:
+
+```text
+weight_i = N / (C × n_i)
+```
+
+where:
+
+- `N` = total number of training samples
+- `C` = number of classes
+- `n_i` = number of samples belonging to class i
+
+These weights were used with weighted Cross-Entropy Loss.
 
 ---
 
 ## Training
 
-The model was trained for 5 epochs using:
+### Training Configuration
 
-- Optimizer: Adam
-- Learning rate: 0.001
-- Batch size: 32
-- Loss: Weighted Cross-Entropy Loss
-- Hardware: CPU
+```text
+Model:              MobileNetV3 Small
+Transfer Learning:  Yes
+Epochs:             5
+Batch Size:         32
+Optimizer:          Adam
+Learning Rate:      0.001
+Loss:               Weighted Cross-Entropy
+Device:             CPU
+Input Size:         224 × 224
+```
 
-The best model was selected using validation accuracy.
-
-The trained model is saved locally as:
+The model with the best validation accuracy was saved as:
 
 ```text
 best_model.pth
 ```
 
-The model file is excluded from GitHub because of its size.
-
 ---
 
 ## Results
 
-The final model achieved:
+The final trained model was evaluated on a **held-out test set of 1,687 images**.
 
-### Test Accuracy
+### Test Performance
 
-**99.53%**
+| Metric | Score |
+|---|---:|
+| Accuracy | **99.53%** |
+| Macro F1 Score | **99.71%** |
+| Weighted F1 Score | **99.52%** |
 
-on the held-out test set of **1,687 images**.
+The model made **8 incorrect predictions out of 1,687 test images**.
 
-### Additional Metrics
+### Main Confusions
 
-- Macro F1-score: **99.71%**
-- Weighted F1-score: **99.52%**
+Most of the incorrect predictions involved visually similar apple classes:
 
-The model made only **8 incorrect predictions out of 1,687 test images**.
+```text
+fresh_apple → stale_apple
+stale_apple → fresh_apple
+```
 
-The main confusion occurred between fresh and stale apples, which is reasonable because these classes can have visually similar characteristics.
+This is expected because freshness can sometimes be difficult to distinguish from appearance alone.
 
-> The reported accuracy is based on the project's held-out test dataset and does not guarantee the same performance on arbitrary real-world images.
+The `stale_capsicum` test class achieved 6/6 correct predictions, but this class has very few examples, so this result should not be interpreted as evidence of broad real-world performance.
 
 ---
 
-## Web Application
+## Confusion Matrix
 
-The project includes a Streamlit application.
+The confusion matrix was generated using the held-out test set to analyze class-level performance.
 
-The application allows the user to:
+It helps identify which classes the model confuses with one another instead of relying only on overall accuracy.
 
-1. Upload a food image
-2. View the uploaded image
-3. Automatically receive a prediction
-4. See the predicted food type
-5. See the predicted freshness condition
-6. See the confidence score
-7. View the Top-3 predictions
+---
 
-Example workflow:
+## Streamlit Application
+
+The trained model is integrated into a Streamlit web application.
+
+### Application Flow
 
 ```text
 Upload Image
-      ↓
-Model Prediction
-      ↓
-Food: Capsicum
-      ↓
-Condition: Fresh
-      ↓
-Confidence: 99.61%
-      ↓
-Top 3 Predictions
+     ↓
+Resize to 224 × 224
+     ↓
+Normalize Image
+     ↓
+MobileNetV3 Small
+     ↓
+Prediction
+     ↓
+Food Type + Freshness + Confidence
 ```
+
+The application automatically performs prediction after an image is uploaded.
+
+No separate classification button is required.
+
+### Example
+
+An uploaded image can produce a result such as:
+
+```text
+Food: Apple
+Condition: Fresh
+Confidence: 98.42%
+```
+
+---
+
+## Deployment
+
+The application is deployed using **Streamlit Community Cloud**.
+
+### Live Application
+
+https://fruits-health-based-on-picture-ferers8ytrsqpym4qjjnff.streamlit.app/
+
+The deployment uses the trained model stored in the GitHub repository.
 
 ---
 
 ## Project Structure
 
 ```text
-ML project/
+Fruits-health-based-on-picture/
 │
 ├── app.py
 ├── model.py
-├── food_dataset.py
-├── prepare_dataset.py
 ├── train.py
 ├── evaluate.py
 ├── predict.py
-├── plot_confusion_matrix.py
-│
+├── food_dataset.py
+├── prepare_dataset.py
 ├── check_dataset.py
 ├── class_distribution.py
-├── view_samples.py
+├── plot_confusion_matrix.py
 │
+├── dataset_splits.csv
+├── best_model.pth
 ├── requirements.txt
 ├── README.md
-├── .gitignore
-│
-├── confusion_matrix.png
-│
-├── dataset/
-│   └── archive/
-│       └── ...
-│
-├── external_test_img/
-│   └── ...
-│
-└── best_model.pth
+└── .gitignore
 ```
 
-The dataset, virtual environment, and trained model are excluded from version control.
+The original dataset and Python virtual environment are excluded from GitHub using `.gitignore`.
 
 ---
 
@@ -266,8 +343,11 @@ The dataset, virtual environment, and trained model are excluded from version co
 ### 1. Clone the repository
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
-cd "ML project"
+git clone https://github.com/NITIKA39/Fruits-health-based-on-picture.git
+```
+
+```bash
+cd Fruits-health-based-on-picture
 ```
 
 ### 2. Create a virtual environment
@@ -278,7 +358,7 @@ python -m venv .venv
 
 ### 3. Activate the environment
 
-Windows PowerShell:
+On Windows PowerShell:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
@@ -294,13 +374,9 @@ pip install -r requirements.txt
 
 ## Dataset Setup
 
-Download the dataset and place it inside:
+The dataset is not included in the GitHub repository because of its size.
 
-```text
-dataset/archive/
-```
-
-The expected structure is:
+The expected local structure is:
 
 ```text
 dataset/
@@ -317,13 +393,9 @@ dataset/
     └── stale_capsicum/
 ```
 
----
+After placing the dataset in the expected location, run:
 
-## Preparing the Dataset
-
-Run:
-
-```powershell
+```bash
 python prepare_dataset.py
 ```
 
@@ -333,87 +405,138 @@ This creates:
 dataset_splits.csv
 ```
 
-containing the image paths, labels, and train/validation/test split assignments.
+containing the image paths, labels, and dataset split information.
 
 ---
 
-## Training the Model
+## Running the Training Pipeline
 
-Run:
+### Prepare the dataset
 
-```powershell
+```bash
+python prepare_dataset.py
+```
+
+### Train the model
+
+```bash
 python train.py
 ```
 
-The best validation model will be saved as:
+The best validation model is saved as:
 
 ```text
 best_model.pth
 ```
 
----
+### Evaluate the model
 
-## Evaluating the Model
-
-Run:
-
-```powershell
+```bash
 python evaluate.py
 ```
 
-This generates evaluation metrics including:
+### Generate the confusion matrix
 
-- Accuracy
-- Precision
-- Recall
-- F1-score
-- Confusion matrix
-
----
-
-## Single Image Prediction
-
-You can also test an individual image:
-
-```powershell
-python predict.py "path\to\image.jpg"
+```bash
+python plot_confusion_matrix.py
 ```
 
-Example:
+### Test a single image
 
-```powershell
-python predict.py "external_test_img\banana.jpg"
+```bash
+python predict.py
 ```
 
-The program displays the predicted class, confidence, and Top-3 predictions.
+### Run the Streamlit application locally
 
----
-
-## Running the Streamlit Application
-
-Start the web application with:
-
-```powershell
+```bash
 streamlit run app.py
 ```
 
-Then open the local Streamlit URL shown in the terminal.
+The local application will normally be available at:
 
-The application automatically performs prediction after an image is uploaded.
+```text
+http://localhost:8501
+```
+
+---
+
+## Technologies Used
+
+### Programming
+
+- Python
+
+### Machine Learning
+
+- PyTorch
+- Torchvision
+- MobileNetV3 Small
+- Transfer Learning
+- Scikit-learn
+
+### Image Processing
+
+- Pillow
+- OpenCV
+
+### Data Processing
+
+- Pandas
+- NumPy
+
+### Visualization
+
+- Matplotlib
+
+### Deployment
+
+- Streamlit
+- Streamlit Community Cloud
+
+### Version Control
+
+- Git
+- GitHub
 
 ---
 
 ## Limitations
 
-This project has several limitations:
+This project has several limitations.
 
-- The dataset is relatively small for a production-grade computer vision system.
-- The dataset is class-imbalanced.
-- Some classes contain very few images.
-- Real-world images can have different lighting, backgrounds, camera angles, and image quality.
-- The model only recognizes the 10 classes present in the training dataset.
-- A high model confidence does not mean the prediction is always correct.
-- Visual freshness classification should not be interpreted as a food safety assessment.
+### 1. Dataset limitations
+
+The model was trained on a specific dataset and may not perform equally well on images from completely different environments.
+
+Differences in:
+
+- Lighting
+- Background
+- Camera quality
+- Food orientation
+- Image quality
+- Food variety
+
+can affect predictions.
+
+### 2. Class coverage
+
+The model only recognizes the 10 classes included in the training dataset.
+
+It should not be assumed to correctly classify foods outside these categories.
+
+### 3. Class imbalance
+
+Some classes contain substantially fewer images than others, especially `stale_capsicum`.
+
+Class weighting was used to reduce the effect of imbalance, but additional data would improve reliability.
+
+### 4. Visual freshness is not food safety
+
+The model only analyzes visual patterns.
+
+A prediction of `fresh` does **not** mean that food is safe to consume.
 
 ---
 
@@ -421,59 +544,68 @@ This project has several limitations:
 
 Possible improvements include:
 
-- Add more food categories
-- Collect a larger and more diverse dataset
-- Improve performance on rare classes
-- Fine-tune more MobileNet layers
-- Compare MobileNetV3 with ResNet or EfficientNet
-- Add Grad-CAM visual explanations
-- Add confidence-based uncertainty warnings
-- Deploy the application online
-- Optimize the model for mobile or edge devices
+- Collecting a larger and more diverse dataset
+- Adding more fruits and vegetables
+- Increasing the number of examples for rare classes
+- Fine-tuning more MobileNet layers
+- Comparing MobileNetV3 with EfficientNet or ResNet
+- Adding image-quality checks
+- Testing on a larger external dataset
+- Adding prediction history
+- Adding an API backend
+- Optimizing the model for mobile deployment
+- Adding confidence-based "uncertain" predictions
 
 ---
 
-## Technologies Used
+## What I Learned
 
-- Python
-- PyTorch
-- Torchvision
-- MobileNetV3
-- Transfer Learning
-- Scikit-learn
-- Pandas
-- NumPy
-- Pillow
-- Matplotlib
-- OpenCV
-- Streamlit
+This project provided hands-on experience with the complete machine learning workflow:
+
+- Dataset exploration
+- Class distribution analysis
+- Train/validation/test splitting
+- Data augmentation
+- Image preprocessing
+- PyTorch Dataset and DataLoader
+- Transfer learning
+- CNN classification
+- Handling class imbalance
+- Model training
+- Validation
+- Test-set evaluation
+- Confusion matrix analysis
+- Single-image inference
+- Streamlit application development
+- Git/GitHub workflow
+- Model deployment
 
 ---
 
 ## Project Outcome
 
-This project demonstrates an end-to-end computer vision workflow:
+The project demonstrates an end-to-end machine learning application rather than only a trained model.
+
+It covers the complete journey:
 
 ```text
 Dataset
    ↓
-Exploratory Data Analysis
-   ↓
-Data Preparation
+Exploration
    ↓
 Preprocessing
    ↓
-Transfer Learning
+Model Development
    ↓
-Model Training
+Training
    ↓
-Validation
+Evaluation
    ↓
-Test Evaluation
+Inference
    ↓
-External Testing
+Web Application
    ↓
-Streamlit Deployment Interface
+Cloud Deployment
 ```
 
-It combines machine learning, computer vision, model evaluation, and application development into a single end-to-end project.
+**Final result:** a deployed food freshness classification application powered by a MobileNetV3 Small transfer-learning model.
