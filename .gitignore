@@ -22,7 +22,6 @@ Thumbs.db
 dataset_splits.csv
 
 # Model files
-*.pth
 *.pt
 *.onnx
 
